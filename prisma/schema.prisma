@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  photoUrl  String?
+  lastLogin DateTime?
+
+  // يحدد نوع المستخدم (CAB / CASCOTEC / CLIENT)
+  userType UserType
+
+  // علاقة مع CAB (لو المستخدم تابع لشركة اعتماد)
+  cabId Int?
+  cab   Cab? @relation(fields: [cabId], references: [id], onDelete: Cascade)
+
+  // الدور الخاص بالمستخدم
+  role UserRole
+
+  // تفاصيل إضافية لبعض الأدوار (Auditor / Technical Manager / Trainee)
+  coveredSchemes  Json?
+  coveredSectors  Json?
+  validationDate  DateTime?
+  nextWitnessDate DateTime?
+  employmentType  EmploymentType?
+
+  // لأعضاء اللجان
+  committeeType CommitteeType?
+  committeeName String?
+
+  // بيانات العميل (Client-specific)
+  clientProfile ClientProfile?
+
+  // كل الطلبات اللي عملها المستخدم
+  serviceRequests ServiceRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum UserType {
+  CAB
+  CASCOTEC
+  CLIENT
+}
+
+enum UserRole {
+  // CAB Roles
+  CAB_ADMIN
+  CAB_CUSTOMER_SERVICE
+  CAB_SALES
+  CAB_ACCOUNTANT
+  CAB_CERTIFICATION_MANAGER
+  CAB_TECHNICAL_MANAGER
+  CAB_LEAD_AUDITOR
+  CAB_AUDITOR
+  CAB_TRAINEE
+  CAB_CEO
+  CAB_COMMITTEE_MEMBER
+
+  // CASCOTEC Roles
+  CASCOTEC_ADMIN
+  CASCOTEC_CUSTOMER_SUPPORT
+  CASCOTEC_SALES
+  CASCOTEC_ACCOUNT_MANAGER
+  CASCOTEC_CFO
+  CASCOTEC_CEO
+
+  // Client Role
+  CLIENT_USER
+}
+
+enum CommitteeType {
+  COMPLAINTS
+  CERTIFICATION
+  IMPARTIALITY
+}
+
+enum EmploymentType {
+  FULL_TIME
+  FREELANCER
+}
+
+model ClientProfile {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  companyName      String
+  companyAddress   String
+  contactPerson    String
+  email            String
+  requiredStandard String
+  invitationCode   String?
+
+  serviceRequests ServiceRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+model Scheme {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique      // e.g. "ISO 9001"
+  sectors    Sector[]    // related sectors
+  cabSchemes CabScheme[] // CAB-Scheme relations
+  createdAt  DateTime    @default(now())
+}
+
+model Sector {
+  id                 Int                  @id @default(autoincrement())
+  schemeId           Int
+  name               String               // e.g. "Mechanical"
+  iafCode            String               // e.g. "17"
+  description        String?
+  criticalCode       String?
+
+  scheme             Scheme               @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  cabTechnicalSectors CabTechnicalSector[] 
+}
+
+model CabScheme {
+  id       Int    @id @default(autoincrement())
+  cabId    Int
+  schemeId Int
+  cab      Cab    @relation(fields: [cabId], references: [id], onDelete: Cascade)
+  scheme   Scheme @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+}
+
+model CabTechnicalSector {
+  id       Int    @id @default(autoincrement())
+  cabId    Int
+  sectorId Int
+  cab      Cab    @relation(fields: [cabId], references: [id], onDelete: Cascade)
+  sector   Sector @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+}
+
+model Cab {
+  id Int @id @default(autoincrement())
+
+  // Basic Info
+  name      String  @unique
+  country   String
+  hqAddress String
+  branches  String?
+
+  // Accreditation
+  accreditationBody String
+  slug              String @unique
+  shareableLink     String?
+  validTo           DateTime?
+
+  // Relations
+  schemes          CabScheme[]          // Schemes & Standards
+  technicalSectors CabTechnicalSector[] // Technical Sectors
+  users            User[]
+  serviceRequests  ServiceRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+
+
+
+
+
+
+model ServiceRequest {
+  id Int @id @default(autoincrement())
+
+  // معلومات العميل
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  clientProfileId Int
+  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
+
+  // الـ CAB اللي هيتابع الطلب
+  cabId Int?
+  cab   Cab? @relation(fields: [cabId], references: [id])
+
+  // تفاصيل الطلب
+  serviceType String // مثال: "Initial Certification", "Surveillance", "Recertification"
+  standard    String // مثال: "ISO 9001:2015"
+  status      String @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, REJECTED
+
+  // معلومات إضافية
+  description    String?
+  documents      Json? // مصفوفة روابط المستندات
+  invitationCode String? // لو فيه كود دعوة خاص بالعميل
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
