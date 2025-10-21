@@ -153,3 +153,126 @@ export const getCabPortal = asyncHandler(async (req, res) => {
   });
 });
 
+
+
+export const getCabSchemes = asyncHandler(async (req, res) => {
+  const { cabId } = req.params;
+
+  const cab = await prisma.cab.findUnique({
+    where: { id: Number(cabId) },
+  });
+
+  if (!cab) {
+    return res.status(404).json({
+      success: false,
+      message: "CAB not found",
+    });
+  }
+
+  const cabSchemes = await prisma.cabScheme.findMany({
+    where: { cabId: Number(cabId) },
+    include: {
+      scheme: {
+        include: {
+          sectors: true,
+        },
+      },
+    },
+  });
+
+  if (cabSchemes.length === 0) {
+    return res.status(200).json({
+      success: true,
+      message: "This CAB has no assigned schemes yet",
+      data: [],
+    });
+  }
+
+  const formattedData = cabSchemes.map((cs) => ({
+    id: cs.scheme.id,
+    name: cs.scheme.name,
+    sectors: cs.scheme.sectors.map((s) => ({
+      id: s.id,
+      name: s.name,
+      iafCode: s.iafCode,
+      description: s.description,
+      criticalCode: s.criticalCode,
+    })),
+  }));
+
+  res.status(200).json({
+    success: true,
+    message: "CAB schemes fetched successfully",
+    data: formattedData,
+  });
+});
+
+
+
+export const selectCabScheme = asyncHandler(async (req, res) => {
+  const { cabId } = req.params;
+  const { schemeId, sectorIds } = req.body;
+
+  const cab = await prisma.cab.findUnique({
+    where: { id: Number(cabId) },
+  });
+
+  if (!cab) {
+    return res.status(404).json({
+      success: false,
+      message: 'CAB not found',
+    });
+  }
+
+  const existingCabScheme = await prisma.cabScheme.findFirst({
+    where: {
+      cabId: Number(cabId),
+      schemeId: Number(schemeId),
+    },
+  });
+
+  if (existingCabScheme) {
+    return res.status(200).json({
+      success: true,
+      message: 'This scheme already exists for this CAB',
+    });
+  }
+
+  const newCabScheme = await prisma.cabScheme.create({
+    data: {
+      cabId: Number(cabId),
+      schemeId: Number(schemeId),
+    },
+  });
+
+  if (Array.isArray(sectorIds) && sectorIds.length > 0) {
+    await Promise.all(
+      sectorIds.map(async (sectorId) => {
+        const existingSector = await prisma.cabTechnicalSector.findFirst({
+          where: {
+            cabId: Number(cabId),
+            sectorId: Number(sectorId),
+          },
+        });
+
+        if (!existingSector) {
+          await prisma.cabTechnicalSector.create({
+            data: {
+              cabId: Number(cabId),
+              sectorId: Number(sectorId),
+            },
+          });
+        }
+      })
+    );
+  }
+
+  return res.status(201).json({
+    success: true,
+    message: 'Scheme and related sectors added successfully to CAB',
+    data: newCabScheme,
+  });
+});
+
+
+

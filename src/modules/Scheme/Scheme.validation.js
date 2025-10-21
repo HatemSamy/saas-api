@@ -11,3 +11,17 @@ export const createSchemeSchema = joi.object({
     })
   ).optional(),
 });
+
+
+
+
+export const addSectorToSchemeSchema = joi.object({
+  name: joi.string().min(2).max(100).required().messages({
+    'string.empty': 'Sector name is required',
+  }),
+  iafCode: joi.string().required().messages({
+    'string.empty': 'IAF Code is required',
+  }),
+  description: joi.string().allow('', null),
+  criticalCode: joi.string().allow('', null),
+});

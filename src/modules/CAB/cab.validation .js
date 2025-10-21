@@ -32,3 +32,23 @@ export const createCabSchema = joi.object({
   adminEmail: joi.string().email().required(),
   adminPassword: joi.string().min(6).required()
 });
+
+
+
+export const selectCabSchemeSchema = joi.object({
+  schemeId: joi.number()
+    .integer()
+    .positive()
+    .required()
+    .messages({
+      'number.base': 'Scheme ID must be a number',
+      'any.required': 'Scheme ID is required',
+    }),
+
+  sectorIds: joi.array()
+    .items(joi.number().integer().positive())
+    .optional()
+    .messages({
+      'array.base': 'Sector IDs must be an array of numbers',
+    }),
+});

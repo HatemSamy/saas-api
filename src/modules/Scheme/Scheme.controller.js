@@ -69,3 +69,84 @@ export const getSchemes = asyncHandler(async (req, res) => {
 
 
 
+// 📍 GET /api/v1/users
+export const getAllUsers = asyncHandler(async (req, res) => {
+  const { role, userType, page = 1, size = 10 } = req.query;
+
+  const skip = (page - 1) * size;
+  const take = parseInt(size);
+
+  // Build filter dynamically
+  const filters = {};
+  if (role) filters.role = role;
+  if (userType) filters.userType = userType;
+
+  const users = await prisma.user.findMany({
+    where: filters,
+    skip,
+    take,
+   
+    orderBy: { createdAt: 'desc' }
+  });
+
+  if (!users.length) {
+    return res.status(404).json({
+      success: false,
+      message: 'No users found'
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    count: users.length,
+    data: users
+  });
+});
+
+
+
+
+export const addSectorToScheme = asyncHandler(async (req, res) => {
+  const { schemeId } = req.params;
+  const { name, iafCode, description, criticalCode } = req.body;
+  const existingScheme = await prisma.scheme.findUnique({
+    where: { id: Number(schemeId) },
+  });
+
+  if (!existingScheme) {
+    return res.status(404).json({
+      success: false,
+      message: 'Scheme not found',
+    });
+  }
+
+  const existingSector = await prisma.sector.findFirst({
+    where: {
+      schemeId: Number(schemeId),
+      name,
+    },
+  });
+
+  if (existingSector) {
+    return res.status(400).json({
+      success: false,
+      message: 'Sector already exists in this scheme',
+    });
+  }
+
+  const sector = await prisma.sector.create({
+    data: {
+      name,
+      iafCode,
+      description: description || null,
+      criticalCode: criticalCode || null,
+      schemeId: Number(schemeId),
+    },
+  });
+
+  return res.status(201).json({
+    success: true,
+    message: 'Sector added successfully to the scheme',
+    data: sector,
+  });
+});
