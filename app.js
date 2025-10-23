@@ -12,6 +12,7 @@ import express from 'express'
 import * as indexRouter from './src/modules/index.router.js'
 import { connectDB } from './config/connection.js'
 import { globalErrorHandling } from './src/middleware/errorHandling.js'
+import { authLimiter } from './src/middleware/rateLimiter.js';
 const app = express()
 
 // setup port and the baseUrl
@@ -46,7 +47,7 @@ const corsOptions = {
 
 // Apply CORS
 app.use(cors(corsOptions));
-// app.options("*", cors(corsOptions));
+
 
 // Session config for OAuth
 app.use(session({
@@ -83,11 +84,13 @@ app.get('/oauth-success', (req, res) => {
 //Setup API Routing 
 app.use(`${baseUrl}/Cab`, indexRouter.CabRouter)
 app.use(`${baseUrl}/scheme`, indexRouter.SchemeRouter)
+app.use(`${baseUrl}/auth`,authLimiter ,indexRouter.AuthRouter)
+
 
 
 
 app.get("/Welcome_API", (req, res) => {
-  res.send("<h1>🚀 Welcome to the SaaS API!</h1><p>Server is running successfully.</p>");
+  res.send("<h1> Welcome to the SaaS API!</h1><p>Server is running successfully.</p>");
 });
 
 

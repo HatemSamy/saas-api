@@ -1,5 +1,4 @@
 import { prisma } from '../../../config/connection.js';
-
 import bcrypt from 'bcrypt';
 import { asyncHandler } from '../../middleware/errorHandling.js'
 import { generateUniqueSlug } from '../../utils/helpers.js';
@@ -14,14 +13,14 @@ export const createCab = asyncHandler(async (req, res) => {
     branches,
     accreditationBody,
     validTo,
-    schemes,           // optional
-    technicalSectors,  // optional
+    schemes,          
+    technicalSectors,  
     adminName,
     adminEmail,
     adminPassword,
   } = req.body;
 
-  // Check if CAB or admin email already exists
+
   const existingCab = await prisma.cab.findUnique({ where: { name } });
   const existingUser = await prisma.user.findUnique({ where: { email: adminEmail } });
 
@@ -30,7 +29,6 @@ export const createCab = asyncHandler(async (req, res) => {
   if (existingUser)
     return res.status(400).json({ success: false, message: 'Admin email already used' });
 
-  // Business rule: cannot create technical sectors without schemes
   if ((!schemes || !schemes.length) && technicalSectors?.length) {
     return res.status(400).json({
       success: false,
@@ -38,7 +36,6 @@ export const createCab = asyncHandler(async (req, res) => {
     });
   }
 
-  // Hash password
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
   const slug = await generateUniqueSlug(name);
 
@@ -61,7 +58,6 @@ export const createCab = asyncHandler(async (req, res) => {
     }
   };
 
-  // Optional Schemes
   if (schemes?.length) {
     cabData.schemes = {
       create: schemes.map(s => ({
