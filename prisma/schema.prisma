@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//____________________________________________
+
 model User {
   id        Int       @id @default(autoincrement())
   name      String
@@ -15,35 +17,24 @@ model User {
   photoUrl  String?
   lastLogin DateTime?
 
-  // يحدد نوع المستخدم (CAB / CASCOTEC / CLIENT)
+  // (CAB / CASCOTEC / CLIENT)
   userType UserType
 
-  // علاقة مع CAB (لو المستخدم تابع لشركة اعتماد)
+  roles UserRoleAssignment[]
+
   cabId Int?
   cab   Cab? @relation(fields: [cabId], references: [id], onDelete: Cascade)
 
-  // الدور الخاص بالمستخدم
-  role UserRole
+  clientProfile    ClientProfile?
+  auditorProfile   AuditorProfile?
+  committeeProfile CommitteeProfile?
 
-  // تفاصيل إضافية لبعض الأدوار (Auditor / Technical Manager / Trainee)
-  coveredSchemes  Json?
-  coveredSectors  Json?
-  validationDate  DateTime?
-  nextWitnessDate DateTime?
-  employmentType  EmploymentType?
-
-  // لأعضاء اللجان
-  committeeType CommitteeType?
-  committeeName String?
-
-  // بيانات العميل (Client-specific)
-  clientProfile ClientProfile?
-
-  // كل الطلبات اللي عملها المستخدم
   serviceRequests ServiceRequest[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([email])
+  @@index([userType])
 }
 
 enum UserType {
@@ -74,19 +65,40 @@ enum UserRole {
   CASCOTEC_CFO
   CASCOTEC_CEO
 
-  // Client Role
+  // CLIENT Role
   CLIENT_USER
+}
+
+model AuditorProfile {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  coveredSchemes  String[] // ["ISO 9001", "ISO 14001"]
+  coveredSectors  String[] // ["IAF 28", "IAF 34"]
+  validationDate  DateTime?
+  nextWitnessDate DateTime?
+  employmentType  EmploymentType?
+}
+
+enum EmploymentType {
+  FULL_TIME
+  FREELANCER
+}
+
+model CommitteeProfile {
+  id            Int           @id @default(autoincrement())
+  userId        Int           @unique
+  user          User          @relation(fields: [userId], references: [id])
+  committeeType CommitteeType
+  committeeName String?
+  coveredSector String?
 }
 
 enum CommitteeType {
   COMPLAINTS
   CERTIFICATION
   IMPARTIALITY
-}
-
-enum EmploymentType {
-  FULL_TIME
-  FREELANCER
 }
 
 model ClientProfile {
@@ -107,26 +119,41 @@ model ClientProfile {
   updatedAt DateTime @updatedAt
 }
 
+model UserRoleAssignment {
+  id     Int  @id @default(autoincrement())
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
 
+  role  UserRole
+  cabId Int?
+  cab   Cab?     @relation(fields: [cabId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+
+  @@index([role])
+  @@index([cabId])
+}
+
+//_________________________________________________________________________
 
 model Scheme {
   id         Int         @id @default(autoincrement())
-  name       String      @unique      // e.g. "ISO 9001"
-  sectors    Sector[]    // related sectors
+  name       String      @unique // e.g. "ISO 9001"
+  sectors    Sector[] // related sectors
   cabSchemes CabScheme[] // CAB-Scheme relations
   createdAt  DateTime    @default(now())
 }
 
 model Sector {
-  id                 Int                  @id @default(autoincrement())
-  schemeId           Int
-  name               String               // e.g. "Mechanical"
-  iafCode            String               // e.g. "17"
-  description        String?
-  criticalCode       String?
+  id           Int     @id @default(autoincrement())
+  schemeId     Int
+  name         String // e.g. "Mechanical"
+  iafCode      String // e.g. "17"
+  description  String?
+  criticalCode String?
 
-  scheme             Scheme               @relation(fields: [schemeId], references: [id], onDelete: Cascade)
-  cabTechnicalSectors CabTechnicalSector[] 
+  scheme              Scheme               @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  cabTechnicalSectors CabTechnicalSector[]
 }
 
 model CabScheme {
@@ -156,26 +183,20 @@ model Cab {
 
   // Accreditation
   accreditationBody String
-  slug              String @unique
+  slug              String    @unique
   shareableLink     String?
   validTo           DateTime?
 
   // Relations
-  schemes          CabScheme[]          // Schemes & Standards
-  technicalSectors CabTechnicalSector[] // Technical Sectors
-  users            User[]
-  serviceRequests  ServiceRequest[]
+  schemes             CabScheme[] // Schemes & Standards
+  technicalSectors    CabTechnicalSector[] // Technical Sectors
+  users               User[]
+  serviceRequests     ServiceRequest[]
+  userRoleAssignments UserRoleAssignment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
-
-
-
-
-
-
 
 model ServiceRequest {
   id Int @id @default(autoincrement())
