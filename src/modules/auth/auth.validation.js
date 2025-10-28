@@ -10,3 +10,15 @@ export const loginSchema = joi.object({
     'string.min': 'Password must be at least 6 characters long',
   }),
 });
+
+
+
+
+
+export const registerClientFromCabSchema = joi.object({
+  companyName: joi.string().min(3).required(),
+  companyAddress: joi.string().required(),
+  contactPerson: joi.string().required(),
+  email: joi.string().email().required(),
+  requiredStandard: joi.string().required(),
+});

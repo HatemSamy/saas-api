@@ -52,3 +52,41 @@ export const selectCabSchemeSchema = joi.object({
       'array.base': 'Sector IDs must be an array of numbers',
     }),
 });
+
+
+
+
+
+export const addCabUserSchema = joi.object({
+  cabId: joi.number().integer().positive().required(),
+  name: joi.string().min(3).max(255).required(),
+  email: joi.string().email().required(),
+  password: joi.string().min(6).required(),
+
+  // Allow multiple roles
+  roles: joi.array()
+    .items(
+      joi.string().valid(
+        'CAB_ADMIN',
+        'CAB_CUSTOMER_SERVICE',
+        'CAB_SALES',
+        'CAB_ACCOUNTANT',
+        'CAB_CERTIFICATION_MANAGER',
+        'CAB_TECHNICAL_MANAGER',
+        'CAB_LEAD_AUDITOR',
+        'CAB_AUDITOR',
+        'CAB_TRAINEE',
+        'CAB_CEO',
+        'CAB_COMMITTEE_MEMBER'
+      )
+    )
+    .min(1)
+    .required()
+    .messages({
+      "array.min": "At least one role must be provided",
+      "any.required": "Roles are required",
+    }),
+});
+
+
+

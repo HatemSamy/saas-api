@@ -105,13 +105,13 @@ model ClientProfile {
   id     Int  @id @default(autoincrement())
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id])
+  cabId  Int?
+  cab    Cab? @relation(fields: [cabId], references: [id])
 
-  companyName      String
-  companyAddress   String
-  contactPerson    String
-  email            String
-  requiredStandard String
-  invitationCode   String?
+  companyName    String
+  companyAddress String
+  contactPerson  String
+  invitationCode String?
 
   serviceRequests ServiceRequest[]
 
@@ -137,11 +137,12 @@ model UserRoleAssignment {
 //_________________________________________________________________________
 
 model Scheme {
-  id         Int         @id @default(autoincrement())
-  name       String      @unique // e.g. "ISO 9001"
-  sectors    Sector[] // related sectors
-  cabSchemes CabScheme[] // CAB-Scheme relations
-  createdAt  DateTime    @default(now())
+  id              Int              @id @default(autoincrement())
+  name            String           @unique // e.g. "ISO 9001"
+  sectors         Sector[] // related sectors
+  cabSchemes      CabScheme[] // CAB-Scheme relations
+  serviceRequests ServiceRequest[]
+  createdAt       DateTime         @default(now())
 }
 
 model Sector {
@@ -152,6 +153,7 @@ model Sector {
   description  String?
   criticalCode String?
 
+  serviceRequests     ServiceRequest[]
   scheme              Scheme               @relation(fields: [schemeId], references: [id], onDelete: Cascade)
   cabTechnicalSectors CabTechnicalSector[]
 }
@@ -170,6 +172,29 @@ model CabTechnicalSector {
   sectorId Int
   cab      Cab    @relation(fields: [cabId], references: [id], onDelete: Cascade)
   sector   Sector @relation(fields: [sectorId], references: [id], onDelete: Cascade)
+}
+
+//______________
+model ServiceRequest {
+  id              Int  @id @default(autoincrement())
+  cabId           Int
+  clientProfileId Int
+  schemeId        Int
+  sectorId        Int?
+
+  cab           Cab           @relation(fields: [cabId], references: [id])
+  clientProfile ClientProfile @relation(fields: [clientProfileId], references: [id])
+  scheme        Scheme        @relation(fields: [schemeId], references: [id])
+  sector        Sector?       @relation(fields: [sectorId], references: [id])
+
+  description String?
+  documents   Json?
+
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    Int?
 }
 
 model Cab {
@@ -194,34 +219,7 @@ model Cab {
   serviceRequests     ServiceRequest[]
   userRoleAssignments UserRoleAssignment[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model ServiceRequest {
-  id Int @id @default(autoincrement())
-
-  // معلومات العميل
-  userId Int
-  user   User @relation(fields: [userId], references: [id])
-
-  clientProfileId Int
-  clientProfile   ClientProfile @relation(fields: [clientProfileId], references: [id])
-
-  // الـ CAB اللي هيتابع الطلب
-  cabId Int?
-  cab   Cab? @relation(fields: [cabId], references: [id])
-
-  // تفاصيل الطلب
-  serviceType String // مثال: "Initial Certification", "Surveillance", "Recertification"
-  standard    String // مثال: "ISO 9001:2015"
-  status      String @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, REJECTED
-
-  // معلومات إضافية
-  description    String?
-  documents      Json? // مصفوفة روابط المستندات
-  invitationCode String? // لو فيه كود دعوة خاص بالعميل
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  ClientProfile ClientProfile[]
 }

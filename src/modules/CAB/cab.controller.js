@@ -20,21 +20,13 @@ export const createCab = asyncHandler(async (req, res) => {
     adminPassword,
   } = req.body;
 
-
   const existingCab = await prisma.cab.findUnique({ where: { name } });
   const existingUser = await prisma.user.findUnique({ where: { email: adminEmail } });
 
   if (existingCab)
-    return res.status(400).json({ success: false, message: 'CAB already exists' });
+    return res.status(400).json({ success: false, message: "CAB already exists" });
   if (existingUser)
-    return res.status(400).json({ success: false, message: 'Admin email already used' });
-
-  if ((!schemes || !schemes.length) && technicalSectors?.length) {
-    return res.status(400).json({
-      success: false,
-      message: 'Cannot create technical sectors without schemes'
-    });
-  }
+    return res.status(400).json({ success: false, message: "Admin email already used" });
 
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
   const slug = await generateUniqueSlug(name);
@@ -52,52 +44,48 @@ export const createCab = asyncHandler(async (req, res) => {
         name: adminName,
         email: adminEmail,
         password: hashedPassword,
-        role: 'CAB_ADMIN',
-        userType: 'CAB'
-      }
-    }
+        userType: "CAB",
+        roles: {
+          create: [{ role: "CAB_ADMIN" }],
+        },
+      },
+    },
   };
 
   if (schemes?.length) {
     cabData.schemes = {
-      create: schemes.map(s => ({
-        scheme: { create: { name: s.name } }
-      }))
+      create: schemes.map((schemeId) => ({
+        scheme: { connect: { id: schemeId } },
+      })),
     };
   }
 
-  // Optional Technical Sectors (only if schemes exist)
-  if (technicalSectors?.length && schemes?.length) {
+  if (technicalSectors?.length) {
     cabData.technicalSectors = {
-      create: technicalSectors.map(t => ({
-        sector: {
-          create: {
-            name: t.name,
-            iafCode: t.iafCode,
-            description: t.description || null,
-            criticalCode: t.criticalCode || null
-          }
-        }
-      }))
+      create: technicalSectors.map((sectorId) => ({
+        sector: { connect: { id: sectorId } },
+      })),
     };
   }
 
-  // Create CAB
   const cab = await prisma.cab.create({
     data: cabData,
     include: {
       schemes: { include: { scheme: true } },
       technicalSectors: { include: { sector: true } },
-      users: { select: { id: true, name: true, email: true, role: true } }
-    }
+      users: { select: { id: true, name: true, email: true, roles: true } },
+    },
   });
 
   res.status(201).json({
     success: true,
-    message: 'CAB created successfully',
-    data: cab
+    message: "CAB account created successfully",
+    data: cab,
   });
 });
+
+
+
 
 
 export const generateCabLink = asyncHandler(async (req, res) => {
@@ -269,6 +257,58 @@ export const selectCabScheme = asyncHandler(async (req, res) => {
     data: newCabScheme,
   });
 });
+
+
+
+export const addCabUser = asyncHandler(async (req, res) => {
+  const { cabId, name, email, password, roles } = req.body;
+
+  const cab = await prisma.cab.findUnique({ where: { id: cabId } });
+  if (!cab)
+    return res.status(404).json({
+      success: false,
+      message: "CAB not found.",
+    });
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser)
+    return res.status(400).json({
+      success: false,
+      message: "Email is already in use.",
+    });
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+      userType: "CAB",
+      cab: { connect: { id: cabId } },
+
+      roles: {
+        create: roles.map((r) => ({
+          role: r,
+          cabId,
+        })),
+      },
+    },
+    include: {
+      roles: true,
+      cab: { select: { id: true, name: true, country: true } },
+    },
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "CAB user with multiple roles created successfully.",
+    data: user,
+  });
+});
+
+
+
 
 
 

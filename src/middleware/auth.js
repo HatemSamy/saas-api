@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
-import { prisma } from '../../../config/connection.js'; 
-import { asyncHandler } from '../../middleware/errorHandling.js'
+import { prisma } from '../../config/connection.js'; 
 
+import { asyncHandler } from '../../src/middleware/errorHandling.js'
 
 export const authenticateUser = asyncHandler(async (req, res, next) => {
   const authHeader = req.headers.authorization;

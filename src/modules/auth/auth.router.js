@@ -13,4 +13,13 @@ router.post(
   authController.loginUser
 );
 
+
+router.post(
+  '/cab/:slug/register-client',
+  validation(validators.registerClientFromCabSchema),
+  authController.registerClientFromCabLink
+);
+
+
 export default router;
+
