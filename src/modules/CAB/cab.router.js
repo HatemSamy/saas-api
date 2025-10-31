@@ -23,7 +23,12 @@ router.post(
   cabController.addCabUser
 );
 
-
+router.get(
+  "/:cabId/service-requests",
+  authenticateUser,
+  authorizeRoles("CAB", "CLIENT_USER"), 
+  cabController.getCabServiceRequests
+);
 
 
 export default router;

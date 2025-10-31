@@ -85,9 +85,6 @@ export const createCab = asyncHandler(async (req, res) => {
 });
 
 
-
-
-
 export const generateCabLink = asyncHandler(async (req, res) => {
   const { cabId } = req.params;
 
@@ -307,6 +304,70 @@ export const addCabUser = asyncHandler(async (req, res) => {
   });
 });
 
+
+export const getCabServiceRequests = asyncHandler(async (req, res) => {
+  const { cabId } = req.params;
+
+  const cab = await prisma.cab.findUnique({
+    where: { id: Number(cabId) },
+  });
+
+  if (!cab) {
+    return res.status(404).json({
+      success: false,
+      message: "CAB not found.",
+    });
+  }
+
+  const serviceRequests = await prisma.serviceRequest.findMany({
+    where: { cabId: cab.id },
+    include: {
+      clientProfile: {
+        select: {
+          id: true,
+          companyName: true,
+          contactPerson: true,
+          user: { select: { id: true, email: true, name: true } },
+        },
+      },
+      scheme: { select: { id: true, name: true } },
+      sector: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!serviceRequests.length) {
+    return res.status(200).json({
+      success: true,
+      message: "No service requests found for this CAB.",
+      data: [],
+    });
+  }
+
+  const formattedRequests = serviceRequests.map((r) => ({
+    id: r.id,
+    cabId: r.cabId,
+    clientProfileId: r.clientProfileId,
+    schemeId: r.schemeId,
+    sectorId: r.sectorId,
+    schemeName: r.scheme?.name || null,
+    sectorName: r.sector?.name || null,
+    description: r.description,
+    documents: r.documents,
+    status: r.status,
+    companyName: r.clientProfile?.companyName || null,
+    contactPerson: r.clientProfile?.contactPerson || null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  
+  }));
+
+  return res.status(200).json({
+    success: true,
+    message: "CAB service requests retrieved successfully.",
+    data: formattedRequests,
+  });
+});
 
 
 

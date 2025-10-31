@@ -85,6 +85,8 @@ app.get('/oauth-success', (req, res) => {
 app.use(`${baseUrl}/Cab`, indexRouter.CabRouter)
 app.use(`${baseUrl}/scheme`, indexRouter.SchemeRouter)
 app.use(`${baseUrl}/auth`,authLimiter ,indexRouter.AuthRouter)
+app.use(`${baseUrl}/client`,authLimiter ,indexRouter.ClientRouter)
+
 
 
 
